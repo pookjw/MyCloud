@@ -26,10 +26,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject, UNUs
     }
     
     func application(_ application: NSApplication, didReceiveRemoteNotification userInfo: [String : Any]) {
-        
+        if let notificaton = CKNotification(fromRemoteNotificationDictionary: userInfo) {
+            cloudService?.didReceiveNotificationStream.yield(notificaton)
+        }
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if let notificaton = CKNotification(fromRemoteNotificationDictionary: response.notification.request.content.userInfo) {
+            cloudService?.didReceiveNotificationStream.yield(notificaton)
+        }
+        completionHandler()
     }
 }
 
 #elseif os(iOS)
+
+final class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, UNUserNotificationCenterDelegate {
+    var cloudService: CloudService?
+    
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge]) { success, error in
+            assert(error == nil)
+            assert(success)
+            
+            Task { @MainActor in
+                application.registerForRemoteNotifications()
+            }
+        }
+        return true
+    }
+    
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any]) async -> UIBackgroundFetchResult {
+        if let notificaton = CKNotification(fromRemoteNotificationDictionary: userInfo) {
+            cloudService?.didReceiveNotificationStream.yield(notificaton)
+        }
+        
+        return .noData
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if let notificaton = CKNotification(fromRemoteNotificationDictionary: response.notification.request.content.userInfo) {
+            cloudService?.didReceiveNotificationStream.yield(notificaton)
+        }
+        completionHandler()
+    }
+}
 
 #endif

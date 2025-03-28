@@ -35,7 +35,12 @@ fileprivate func swizzle() {
 
 @main
 struct MyCloudApp: App {
+#if os(macOS)
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
+#elseif os(iOS)
+    @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
+#endif
+    
     @State private var cloudService = CloudService()
     
     init() {
@@ -43,6 +48,8 @@ struct MyCloudApp: App {
         swizzle()
 #endif
         appDelegate.cloudService = cloudService
+        
+        //        cloudService.foo()
     }
     
     var body: some Scene {

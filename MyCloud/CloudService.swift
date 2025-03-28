@@ -11,6 +11,7 @@ import Observation
 @Observable
 final class CloudService: NSObject {
     let container: CKContainer = .init(identifier: "iCloud.com.pookjw.BabiFud")
+    let didReceiveNotificationStream = AsyncSubject<CKNotification>()
     
     override init() {
         super.init()
@@ -48,16 +49,10 @@ final class CloudService: NSObject {
     func noteRecords(for scope: CKDatabase.Scope, zone: CKRecordZone) async throws -> [(CKRecord.ID, Result<CKRecord, any Error>)] {
         let database = container.database(with: scope)
         
-        let recordID = CKRecord.ID(recordName: "Test", zoneID: zone.zoneID)
-        let record = CKRecord(recordType: "CD_Notes", recordID: recordID)
-        record.setObject("Test Name" as NSString, forKey: "name")
-        try await database.save(record)
-        
-        
         let result: (matchResults: [(CKRecord.ID, Result<CKRecord, any Error>)], queryCursor: CKQueryOperation.Cursor?) = try await withCheckedThrowingContinuation {
             continuation in
             // recordName을 Queryable하지 않아도 Fetch하는 방법이 있는 것 같음 Core Data 처럼
-            let query = CKQuery(recordType: "CD_Notes", predicate: NSPredicate(value: true))
+            let query = CKQuery(recordType: "Notes", predicate: NSPredicate(value: true))
             
             database.fetch(
                 withQuery: query,
@@ -72,7 +67,43 @@ final class CloudService: NSObject {
         return result.matchResults
     }
     
-    @discardableResult func saveNoteRecord(title: String) async throws -> CKRecord {
-        fatalError()
+    @discardableResult func saveNoteRecord(title: String, scope: CKDatabase.Scope, zone: CKRecordZone) async throws -> CKRecord {
+        let recordID = CKRecord.ID(recordName: UUID().uuidString, zoneID: zone.zoneID)
+        let record = CKRecord.init(recordType: "Notes", recordID: recordID)
+        record.setObject(title as NSString, forKey: "title")
+        
+        let database = container.database(with: scope)
+        try await database.save(record)
+        return record
+    }
+    
+    func foo() {
+        let dbOperation = CKFetchDatabaseChangesOperation(previousServerChangeToken: nil)
+        dbOperation.changeTokenUpdatedBlock = { token in
+            print(token)
+        }
+        
+        container.privateCloudDatabase.fetchAllRecordZones { zones, _ in
+            let zoneOperation = CKFetchRecordZoneChangesOperation(recordZoneIDs: zones!.map { $0.zoneID }, configurationsByRecordZoneID: nil)
+            
+            zoneOperation.recordWasChangedBlock = { recordID, result in
+                print(result)
+            }
+            
+            self.container.privateCloudDatabase.add(zoneOperation)
+        }
+        
+//        dbOperation.recordZoneWithIDChangedBlock = { zoneID in
+//            
+//            let zoneOperation = CKFetchRecordZoneChangesOperation(recordZoneIDs: [zoneID], configurationsByRecordZoneID: nil)
+//            
+//            zoneOperation.recordWasChangedBlock = { recordID, result in
+//                print(result)
+//            }
+//            
+//            self.container.privateCloudDatabase.add(zoneOperation)
+//        }
+        
+        container.privateCloudDatabase.add(dbOperation)
     }
 }
