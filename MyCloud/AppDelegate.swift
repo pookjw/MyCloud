@@ -27,12 +27,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject, UNUs
     
     func application(_ application: NSApplication, didReceiveRemoteNotification userInfo: [String : Any]) {
         if let notificaton = CKNotification(fromRemoteNotificationDictionary: userInfo) {
+            print(notificaton)
             cloudService?.didReceiveNotificationStream.yield(notificaton)
         }
     }
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         if let notificaton = CKNotification(fromRemoteNotificationDictionary: response.notification.request.content.userInfo) {
+            print(notificaton)
             cloudService?.didReceiveNotificationStream.yield(notificaton)
         }
         completionHandler()
@@ -60,6 +62,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, UNUs
     
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any]) async -> UIBackgroundFetchResult {
         if let notificaton = CKNotification(fromRemoteNotificationDictionary: userInfo) {
+            print(notificaton)
             cloudService?.didReceiveNotificationStream.yield(notificaton)
         }
         
@@ -68,6 +71,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, UNUs
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         if let notificaton = CKNotification(fromRemoteNotificationDictionary: response.notification.request.content.userInfo) {
+            print(notificaton)
             cloudService?.didReceiveNotificationStream.yield(notificaton)
         }
         completionHandler()

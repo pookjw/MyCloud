@@ -60,7 +60,14 @@ struct NotesView: View {
                 self.notes = notes
             }
             .task {
-                for await notification in cloudService.didReceiveNotificationStream.stream(bufferingPolicy: .bufferingNewest(1)) {
+                for await notification in cloudService.didReceiveNotificationStream.stream() {
+//                    guard let databaseNotification = notification as? CKDatabaseNotification else {
+//                        continue
+//                    }
+//                    guard databaseNotification.databaseScope == scope else {
+//                        continue
+//                    }
+                    
                     let results = try! await cloudService.noteRecords(for: scope, zone: zone)
                     let notes = results
                         .compactMap { (id, result) in

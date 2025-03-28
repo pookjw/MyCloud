@@ -16,22 +16,63 @@ final class CloudService: NSObject {
     override init() {
         super.init()
         
-        let subscription = CKDatabaseSubscription(subscriptionID: "Test")
-        subscription.recordType = "Notes"
+        let databases = [
+//            container.publicCloudDatabase,
+//            container.sharedCloudDatabase,
+            container.privateCloudDatabase
+        ]
         
-        let notificationInfo = CKSubscription.NotificationInfo()
-        notificationInfo.shouldSendContentAvailable = true
-        notificationInfo.alertBody = ""
-        
-        subscription.notificationInfo = notificationInfo
-        
-        let operation = CKModifySubscriptionsOperation(subscriptionsToSave: [subscription], subscriptionIDsToDelete: nil)
-        
-        operation.modifySubscriptionsResultBlock = { result in
-            print(result)
+        for database in databases {
+            var subscriptions: [CKSubscription] = []
+            
+            do {
+                let subscription = CKDatabaseSubscription(subscriptionID: "Test2")
+                //            subscription.recordType = "Notes"
+                let notificationInfo = CKSubscription.NotificationInfo()
+                notificationInfo.shouldSendContentAvailable = true
+                subscription.notificationInfo = notificationInfo
+                
+                subscriptions.append(subscription)
+            }
+            
+            do {
+                let zoneID = CKRecordZone.ID(zoneName: "Notes", ownerName: CKCurrentUserDefaultName)
+                let subscription = CKRecordZoneSubscription(zoneID: zoneID, subscriptionID: "Test3")
+                
+                let notificationInfo = CKSubscription.NotificationInfo()
+                notificationInfo.shouldSendContentAvailable = true
+                subscription.notificationInfo = notificationInfo
+                
+                subscriptions.append(subscription)
+            }
+            
+            do {
+                let predicate = NSPredicate(value: true)
+                let subscription = CKQuerySubscription(recordType: "Notes", predicate: predicate, subscriptionID: "Test4", options: [.firesOnRecordCreation, .firesOnRecordDeletion, .firesOnRecordUpdate])
+                
+                let notificationInfo = CKSubscription.NotificationInfo()
+                notificationInfo.shouldSendContentAvailable = true
+                subscription.notificationInfo = notificationInfo
+                
+                subscriptions.append(subscription)
+            }
+            
+            let operation = CKModifySubscriptionsOperation(subscriptionsToSave: subscriptions, subscriptionIDsToDelete: nil)
+            
+            operation.perSubscriptionSaveBlock = { subscriptionID, result in
+                print("perSubscriptionSaveBlock", subscriptionID, result)
+            }
+            
+            operation.perSubscriptionDeleteBlock = { subscriptionID, result in
+                print("perSubscriptionDeleteBlock", subscriptionID, result)
+            }
+            
+            operation.modifySubscriptionsResultBlock = { result in
+                print("modifySubscriptionsResultBlock", result)
+            }
+            
+            database.add(operation)
         }
-        
-        container.privateCloudDatabase.add(operation)
     }
     
     func zones(for scope: CKDatabase.Scope) async throws -> [CKRecordZone] {

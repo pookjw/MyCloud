@@ -28,12 +28,18 @@ struct ZonesView: View {
             
             Button("OK") {
                 Task {
-                    try! await cloudService.createZone(for: selectedScope, zoneName: text)
+                    let zone = try! await cloudService.createZone(for: selectedScope, zoneName: text)
+                    zones.append(zone)
                 }
             }
         }
         .task {
             zones = try! await cloudService.zones(for: selectedScope)
+        }
+        .task {
+            for await notification in cloudService.didReceiveNotificationStream.stream() {
+                zones = try! await cloudService.zones(for: selectedScope)
+            }
         }
     }
     
